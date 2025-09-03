@@ -1,3 +1,4 @@
+// netlify/functions/birdeye-contact.js
 exports.handler = async (event) => {
   // CORS preflight
   if (event.httpMethod === "OPTIONS") {
@@ -8,39 +9,66 @@ exports.handler = async (event) => {
   }
 
   try {
+    const ct = (
+      event.headers["content-type"] ||
+      event.headers["Content-Type"] ||
+      ""
+    ).toLowerCase();
+    let body = {};
+
+    if (ct.includes("application/json")) {
+      body = JSON.parse(event.body || "{}");
+    } else if (ct.includes("application/x-www-form-urlencoded")) {
+      body = Object.fromEntries(new URLSearchParams(event.body || ""));
+    } else {
+      try {
+        body = JSON.parse(event.body || "{}");
+      } catch {}
+    }
+
+    // Pull fields (Webflow Names must match)
     let {
       name,
-      Emailid, // keep exact casing to match your Webflow field
+      Emailid,
       phone,
       customerComment,
+      location,
       channel = "Web",
       utmCampaign,
-    } = JSON.parse(event.body || "{}");
+    } = body;
 
-    // Basic email check (lightweight)
-    const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(Emailid || "");
-    // Normalize phone to E.164 (US default), accept already-E.164
+    // Basic validation
+    const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((Emailid || "").trim());
     phone = normalizePhone(phone);
-
     if (!name || !emailOk || !phone) {
       return json(400, {
         error: "Missing/invalid fields: name, Emailid, phone",
       });
     }
 
-    const businessId = process.env.BIRDEYE_BUSINESS_ID;
+    // Resolve location -> businessId
+    const businessId = resolveLocationId(location);
+    if (!businessId) {
+      return json(400, {
+        error: "Invalid or missing location",
+        allowed: ["Birmingham", "Decatur", "Opelika"],
+      });
+    }
+
     const apiKey = process.env.BIRDEYE_API_KEY;
-    if (!businessId || !apiKey) {
-      return json(500, { error: "Server not configured: missing env vars" });
+    if (!apiKey) {
+      return json(500, {
+        error: "Server not configured: missing BIRDEYE_API_KEY",
+      });
     }
 
     const payload = {
       customerComment,
       customer: {
         name,
-        emailId: Emailid, // Birdeye requires camelCase here
+        emailId: Emailid, // Birdeye expects camelCase
         phone, // E.164
-        phoneNumber: phone, // belts & suspenders for any alternate parsing
+        phoneNumber: phone,
         mobileNumber: phone,
       },
       additionalParams: {
@@ -106,6 +134,19 @@ function normalizePhone(raw) {
   if (/^\+\d{8,15}$/.test(str)) return str; // already E.164
   const digits = str.replace(/\D/g, "");
   if (digits.length === 10) return `+1${digits}`; // US local -> E.164
-  if (digits.length === 11 && digits.startsWith("1")) return `+${digits}`; // 1XXXXXXXXXX
+  if (digits.length === 11 && digits.startsWith("1")) return `+${digits}`;
   return ""; // invalid -> let validation fail
+}
+
+// Map dropdown value -> env var business ID
+function resolveLocationId(locRaw) {
+  const key = String(locRaw || "")
+    .trim()
+    .toLowerCase();
+  const envMap = {
+    birmingham: process.env.BIRDEYE_LOCATION_BIRMINGHAM,
+    decatur: process.env.BIRDEYE_LOCATION_DECATUR,
+    opelika: process.env.BIRDEYE_LOCATION_OPELIKA,
+  };
+  return envMap[key] || null;
 }
