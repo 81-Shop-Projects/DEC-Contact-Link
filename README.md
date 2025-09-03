@@ -94,8 +94,8 @@ Alternatively, you can set the **form action** directly to the Netlify function 
 - Normalizes phone to E.164 (+15555555555)
 
 - **Normalization:**
-- `(406) 570-3846` → `+14065703846`
-- `4065703846` → `+14065703846`
+- `(406) 570-3746` → `+14065703746`
+- `4065703746` → `+14065703746`
 
 - **Payload to Birdeye:**
 
@@ -105,9 +105,9 @@ Alternatively, you can set the **form action** directly to the Netlify function 
   "customer": {
     "name": "John Doe",
     "emailId": "john@example.com",
-    "phone": "+14065703846",
-    "phoneNumber": "+14065703846",
-    "mobileNumber": "+14065703846"
+    "phone": "+14065703746",
+    "phoneNumber": "+14065703746",
+    "mobileNumber": "+14065703746"
   },
   "additionalParams": {
     "channel": "Web",
