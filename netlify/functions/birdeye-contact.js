@@ -51,7 +51,7 @@ exports.handler = async (event) => {
     if (!businessId) {
       return json(400, {
         error: "Invalid or missing location",
-        allowed: ["Birmingham", "Decatur", "Opelika"],
+        allowed: ["Birmingham", "Decatur", "Opelika", "Montgomery"],
       });
     }
 
@@ -147,6 +147,7 @@ function resolveLocationId(locRaw) {
     birmingham: process.env.BIRDEYE_LOCATION_BIRMINGHAM,
     decatur: process.env.BIRDEYE_LOCATION_DECATUR,
     opelika: process.env.BIRDEYE_LOCATION_OPELIKA,
+    montgomery: process.env.BIRDEYE_LOCATION_MONTGOMERY,
   };
   return envMap[key] || null;
 }
